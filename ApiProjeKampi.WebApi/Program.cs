@@ -1,33 +1,40 @@
 using ApiProjeKampi.WebApi.Context;
+using AutoMapper;
+using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Connection string önce environment variable'dan, yoksa appsettings'ten okunur
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Server=.\\SQLEXPRESS;Initial Catalog=ApiProjeKampi;Integrated Security=true;TrustServerCertificate=true";
 
-builder.Services.AddDbContext<ApiContext>();
+
+builder.Services.AddDbContext<ApiContext>(options =>
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddAutoMapper(typeof(Program));
 
 builder.Services.AddControllers();
-
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Uygulama başlarken migration'ları otomatik uygula
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApiContext>();
+    db.Database.Migrate();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
-//https://localhost:7072/swagger/index.html
 app.Run();
